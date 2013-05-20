@@ -72,21 +72,14 @@ infix 10 _>_
 ≡-cong : {A B : Set} (f : A → B) {x y : A} → x ≡ y → f x ≡ f y
 ≡-cong f refl = refl
 
-≡-resp : {A : Set} {P : A → Set} {x y : A} → x ≡ y → P x → P y
-≡-resp refl Px = Px
-
-≡-sym : {n m : ℕ⁺} → n ≡ m → m ≡ n
-≡-sym refl = refl
+≡-resp : {A : Set} (P : A → Set) {x y : A} → x ≡ y → P x → P y
+≡-resp _ refl Px = Px
 
 ≥-antisym : {n m : ℕ⁺} → (n ≥ m) → (m ≥ n) → (n ≡ m)
 ≥-antisym {one}   {one}   _ _ = refl
 ≥-antisym {one}   {suc m} () _
 ≥-antisym {suc n} {one}   _ ()
 ≥-antisym {suc n} {suc m} (≥suc p₁) (≥suc p₂) = ≡-cong suc (≥-antisym p₁ p₂)
-
-inl-lemma : {A B : Set} → A ∨ B → (B → ⊥) → A
-inl-lemma (inl a) f = a
-inl-lemma (inr b) f = ⊥-elim (f b)
 
 decidable-≡ : (n m : ℕ⁺) → (n ≡ m) ∨ (n ≢ m)
 decidable-≡ one     one     = inl refl
@@ -101,26 +94,20 @@ one-or-not n = decidable-≡ n one
 
 +-suc : {n m : ℕ⁺} → n + suc m ≡ suc n + m
 +-suc {one} = refl
-+-suc {suc n} = ≡-cong suc +-suc
++-suc {suc n} {m} = ≡-cong suc (+-suc {n} {m})
 
 sucn≥n : {n : ℕ⁺} → suc n ≥ n
 sucn≥n {one}   = ≥one
 sucn≥n {suc n} = ≥suc sucn≥n
 
 +-> : (n m : ℕ⁺) → (n + m > m)
-+-> _       one     = >pf (λ ()) ≥one
++-> one     one     = >pf (λ ()) ≥one
 +-> one     (suc m) = >pf (λ ()) sucn≥n
-+-> (suc n) (suc m) with +-> (suc n) m
-... | >pf _ n+m≥m = >pf (λ ()) (≥suc (≥-cong +-suc n+m≥m))
++-> (suc n) one     = >pf (λ ()) ≥one
++-> (suc n) (suc m) with +-> n (suc m)
+... | >pf _ n+sm≥sm = >pf (λ ()) ? --(≥suc (≥-cong +-suc n+sm≥sm))
   where ≥-cong : {n n' m : ℕ⁺} → n' ≡ n → n ≥ m → n' ≥ m
         ≥-cong refl p = p
-
-²-fixpoint : (n : ℕ⁺) → Set
-²-fixpoint n = n ² ≡ n
-
-²-fixpoint-is-one : (n : ℕ⁺) → ²-fixpoint n → n ≡ one
-²-fixpoint-is-one one _ = refl
-²-fixpoint-is-one (suc n) ()
 
 ²-embiggens-≢-one : {n : ℕ⁺} → (n ≢ one) → (n ² > n)
 ²-embiggens-≢-one {one}   n≢one = ⊥-elim (n≢one refl)
@@ -138,18 +125,25 @@ refute-maximal (m , >pf m≢N m≥N) N≥ = m≢N (≥-antisym m≥N (N≥ m))
 
 one-is-maximal : Σ is-maximal → is-maximal one
 one-is-maximal (N , N≥) with one-or-not N
-... | inl N≡one = ≡-resp N≡one N≥
+... | inl N≡one = ≡-resp is-maximal N≡one N≥
 ... | inr N≢one = ⊥-elim (refute-maximal N²-counterexample N≥)
   where N²-counterexample = (N ² , ²-embiggens-≢-one N≢one)
-
 
 --------------------------------------------------------------------------------
 -- Bonus lemmas
 --------------------------------------------------------------------------------
 
-+-comm : {n m : ℕ⁺} → n + m ≡ m + n
-+-comm {one}   {one}   = refl
-+-comm {one}   {suc m} = +-suc
-+-comm {suc n} {one}   = +-suc
-+-comm {suc n} {suc m} = ≡-cong suc +-comm
+inl-lemma : {A B : Set} → A ∨ B → (B → ⊥) → A
+inl-lemma (inl a) f = a
+inl-lemma (inr b) f = ⊥-elim (f b)
+
+≡-sym : {n m : ℕ⁺} → n ≡ m → m ≡ n
+≡-sym refl = refl
+
+²-fixpoint : (n : ℕ⁺) → Set
+²-fixpoint n = n ² ≡ n
+
+²-fixpoint-is-one : (n : ℕ⁺) → ²-fixpoint n → n ≡ one
+²-fixpoint-is-one one _ = refl
+²-fixpoint-is-one (suc n) ()
 
