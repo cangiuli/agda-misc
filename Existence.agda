@@ -92,22 +92,21 @@ decidable-≡ (suc n) (suc m) with decidable-≡ n m
 one-or-not : (n : ℕ⁺) → (n ≡ one) ∨ (n ≢ one)
 one-or-not n = decidable-≡ n one
 
-+-suc : {n m : ℕ⁺} → n + suc m ≡ suc n + m
-+-suc {one} = refl
-+-suc {suc n} {m} = ≡-cong suc (+-suc {n} {m})
-
 sucn≥n : {n : ℕ⁺} → suc n ≥ n
 sucn≥n {one}   = ≥one
 sucn≥n {suc n} = ≥suc sucn≥n
+
+suc-> : {n m : ℕ⁺} → (n > m) → (suc n > m)
+suc-> {one}   {one} (>pf one≢one _) = ⊥-elim (one≢one refl)
+suc-> {suc n} {one} _ = >pf (λ ()) ≥one
+suc-> {one}   {suc m} (>pf _ ())
+suc-> {suc n} {suc m} _ = ?
 
 +-> : (n m : ℕ⁺) → (n + m > m)
 +-> one     one     = >pf (λ ()) ≥one
 +-> one     (suc m) = >pf (λ ()) sucn≥n
 +-> (suc n) one     = >pf (λ ()) ≥one
-+-> (suc n) (suc m) with +-> n (suc m)
-... | >pf _ n+sm≥sm = >pf (λ ()) ? --(≥suc (≥-cong +-suc n+sm≥sm))
-  where ≥-cong : {n n' m : ℕ⁺} → n' ≡ n → n ≥ m → n' ≥ m
-        ≥-cong refl p = p
++-> (suc n) (suc m) = suc-> (+-> n (suc m))
 
 ²-embiggens-≢-one : {n : ℕ⁺} → (n ≢ one) → (n ² > n)
 ²-embiggens-≢-one {one}   n≢one = ⊥-elim (n≢one refl)
@@ -146,4 +145,8 @@ inl-lemma (inr b) f = ⊥-elim (f b)
 ²-fixpoint-is-one : (n : ℕ⁺) → ²-fixpoint n → n ≡ one
 ²-fixpoint-is-one one _ = refl
 ²-fixpoint-is-one (suc n) ()
+
++-suc : {n m : ℕ⁺} → n + suc m ≡ suc n + m
++-suc {one} = refl
++-suc {suc n} {m} = ≡-cong suc (+-suc {n} {m})
 
