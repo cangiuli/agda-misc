@@ -28,12 +28,6 @@ one × m = m
 _² : ℕ⁺ → ℕ⁺
 n ² = n × n
 
-data _≥_ : ℕ⁺ → ℕ⁺ → Set where
-  ≥one : ∀ {n} → (n ≥ one)
-  ≥suc : ∀ {n m} → (n ≥ m) → (suc n ≥ suc m)
-
-infix 10 _≥_
-
 --------------------------------------------------------------------------------
 -- Logic
 --------------------------------------------------------------------------------
@@ -61,9 +55,15 @@ x ≢ y = x ≡ y → ⊥
 infix 5 _≢_
 
 data _>_ : ℕ⁺ → ℕ⁺ → Set where
-  >pf : ∀ {n m} → (n ≢ m) → (n ≥ m) → (n > m)
+  >one : ∀ {n} → (suc n > one)
+  >suc : ∀ {n m} → (n > m) → (suc n > suc m)
 
 infix 10 _>_
+
+_≥_ : ℕ⁺ → ℕ⁺ → Set
+n ≥ m = (n ≡ m) ∨ (n > m)
+
+infix 10 _≥_
 
 --------------------------------------------------------------------------------
 -- Lemmas
@@ -75,11 +75,13 @@ infix 10 _>_
 ≡-resp : {A : Set} (P : A → Set) {x y : A} → x ≡ y → P x → P y
 ≡-resp _ refl Px = Px
 
-≥-antisym : {n m : ℕ⁺} → (n ≥ m) → (m ≥ n) → (n ≡ m)
-≥-antisym {one}   {one}   _ _ = refl
-≥-antisym {one}   {suc m} () _
-≥-antisym {suc n} {one}   _ ()
-≥-antisym {suc n} {suc m} (≥suc p₁) (≥suc p₂) = ≡-cong suc (≥-antisym p₁ p₂)
+>-irrefl : {n m : ℕ⁺} → (n > m) → (m ≢ n)
+>-irrefl >one ()
+>-irrefl (>suc p) sm≡sn = >-irrefl p (≡-cong pred sm≡sn)
+
+>-antisym : {n m : ℕ⁺} → (n > m) → (m > n) → ⊥
+>-antisym >one ()
+>-antisym (>suc p) (>suc q) = >-antisym p q
 
 decidable-≡ : (n m : ℕ⁺) → (n ≡ m) ∨ (n ≢ m)
 decidable-≡ one     one     = inl refl
@@ -92,20 +94,20 @@ decidable-≡ (suc n) (suc m) with decidable-≡ n m
 one-or-not : (n : ℕ⁺) → (n ≡ one) ∨ (n ≢ one)
 one-or-not n = decidable-≡ n one
 
-sucn≥n : {n : ℕ⁺} → suc n ≥ n
-sucn≥n {one}   = ≥one
-sucn≥n {suc n} = ≥suc sucn≥n
-
 suc-> : {n m : ℕ⁺} → (n > m) → (suc n > m)
-suc-> {one}   {one} (>pf one≢one _) = ⊥-elim (one≢one refl)
-suc-> {suc n} {one} _ = >pf (λ ()) ≥one
-suc-> {one}   {suc m} (>pf _ ())
-suc-> {suc n} {suc m} _ = ?
+suc-> {one}   {one}   _ = >one
+suc-> {suc n} {one}   _ = >one
+suc-> {one}   {suc m} ()
+suc-> {suc n} {suc m} (>suc n>m) = >suc (suc-> n>m)
+
+sucn>n : {n : ℕ⁺} → suc n > n
+sucn>n {one}   = >one
+sucn>n {suc n} = >suc sucn>n
 
 +-> : (n m : ℕ⁺) → (n + m > m)
-+-> one     one     = >pf (λ ()) ≥one
-+-> one     (suc m) = >pf (λ ()) sucn≥n
-+-> (suc n) one     = >pf (λ ()) ≥one
++-> one     one     = >one
++-> (suc n) one     = >one
++-> one     (suc m) = sucn>n
 +-> (suc n) (suc m) = suc-> (+-> n (suc m))
 
 ²-embiggens-≢-one : {n : ℕ⁺} → (n ≢ one) → (n ² > n)
@@ -120,33 +122,13 @@ is-maximal : ℕ⁺ → Set
 is-maximal N = (m : ℕ⁺) → N ≥ m
 
 refute-maximal : {N : ℕ⁺} → Σ (λ m → m > N) → is-maximal N → ⊥
-refute-maximal (m , >pf m≢N m≥N) N≥ = m≢N (≥-antisym m≥N (N≥ m))
+refute-maximal (m , m>N) N≥ with N≥ m
+... | inl N≡m = >-irrefl m>N N≡m
+... | inr N>m = >-antisym m>N N>m
 
 one-is-maximal : Σ is-maximal → is-maximal one
 one-is-maximal (N , N≥) with one-or-not N
 ... | inl N≡one = ≡-resp is-maximal N≡one N≥
 ... | inr N≢one = ⊥-elim (refute-maximal N²-counterexample N≥)
   where N²-counterexample = (N ² , ²-embiggens-≢-one N≢one)
-
---------------------------------------------------------------------------------
--- Bonus lemmas
---------------------------------------------------------------------------------
-
-inl-lemma : {A B : Set} → A ∨ B → (B → ⊥) → A
-inl-lemma (inl a) f = a
-inl-lemma (inr b) f = ⊥-elim (f b)
-
-≡-sym : {n m : ℕ⁺} → n ≡ m → m ≡ n
-≡-sym refl = refl
-
-²-fixpoint : (n : ℕ⁺) → Set
-²-fixpoint n = n ² ≡ n
-
-²-fixpoint-is-one : (n : ℕ⁺) → ²-fixpoint n → n ≡ one
-²-fixpoint-is-one one _ = refl
-²-fixpoint-is-one (suc n) ()
-
-+-suc : {n m : ℕ⁺} → n + suc m ≡ suc n + m
-+-suc {one} = refl
-+-suc {suc n} {m} = ≡-cong suc (+-suc {n} {m})
 
